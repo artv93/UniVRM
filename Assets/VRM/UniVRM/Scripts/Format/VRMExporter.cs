@@ -19,22 +19,17 @@ namespace VRM
             gltf.extensions.VRM = new glTF_VRM_extensions();
         }
 
-        public static glTF Export(GameObject go, bool exportOnlyBlendShapePosition = false)
-        {
-            var config = VRMExporterConfiguration.Default;
-            config.ExportOnlyBlendShapePosition = exportOnlyBlendShapePosition;
-            return Export(go, config);
-        }
-
-        public static glTF Export(GameObject go, VRMExporterConfiguration configuration)
+        public new static glTF Export(GameObject go, bool exportOnlyBlendShapePosition = false)
         {
             var gltf = new glTF();
 
             using (var exporter = new VRMExporter(gltf)
             {
-                UseSparseAccessorForBlendShape = configuration.UseSparseAccessorForBlendShape,
-                ExportOnlyBlendShapePosition = configuration.ExportOnlyBlendShapePosition,
-                RemoveVertexColor = configuration.RemoveVertexColor,
+#if VRM_EXPORTER_USE_SPARSE
+                // experimental
+                UseSparseAccessorForBlendShape = true
+#endif
+                ExportOnlyBlendShapePosition = exportOnlyBlendShapePosition
             })
             {
                 _Export(gltf, exporter, go);
@@ -100,9 +95,10 @@ namespace VRM
                 var avatar = master.BlendShapeAvatar;
                 if (avatar != null)
                 {
+                    var meshes = exporter.Meshes;
                     foreach (var x in avatar.Clips)
                     {
-                        gltf.extensions.VRM.blendShapeMaster.Add(x, exporter);
+                        gltf.extensions.VRM.blendShapeMaster.Add(x, exporter.Copy.transform, meshes);
                     }
                 }
             }

@@ -36,7 +36,7 @@ namespace VRM
     {
         static UssageLicense FromString(string src)
         {
-            return CacheEnum.TryParseOrDefault<UssageLicense>(src, true);
+            return EnumUtil.TryParseOrDefault<UssageLicense>(src);
         }
 
         [JsonSchema(Description = "Title of VRM model")]
@@ -69,7 +69,7 @@ namespace VRM
         {
             get
             {
-                return CacheEnum.TryParseOrDefault<AllowedUser>(allowedUserName, true);
+                return EnumUtil.TryParseOrDefault<AllowedUser>(allowedUserName);
             }
             set
             {
@@ -135,7 +135,7 @@ namespace VRM
         {
             get
             {
-                return CacheEnum.TryParseOrDefault<LicenseType>(licenseName, true);
+                return EnumUtil.TryParseOrDefault<LicenseType>(licenseName);
             }
             set
             {

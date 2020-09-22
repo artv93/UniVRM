@@ -55,7 +55,7 @@ namespace VRM
             var src = new Mesh();
             src.AddBlendShapeFrame("blendShape", 100.0f, null, null, null);
 
-            var dst = MeshUtility.MeshExtensions.Copy(src, true);
+            var dst = src.Copy(true);
 
             MeshEquals(src, dst);
         }

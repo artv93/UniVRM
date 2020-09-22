@@ -20,7 +20,7 @@ namespace UniGLTF
     /// <summary>
     /// GLTF importer
     /// </summary>
-    public class ImporterContext : IDisposable
+    public class ImporterContext: IDisposable
     {
         #region MeasureTime
         bool m_showSpeedLog
@@ -109,7 +109,7 @@ namespace UniGLTF
             {
                 if (m_materialImporter == null)
                 {
-                    m_materialImporter = new MaterialImporter(ShaderStore, (int index) => this.GetTexture(index));
+                    m_materialImporter = new MaterialImporter(ShaderStore, this);
                 }
                 return m_materialImporter;
             }
@@ -261,7 +261,7 @@ namespace UniGLTF
                 ParseJson(Encoding.UTF8.GetString(jsonBytes.Array, jsonBytes.Offset, jsonBytes.Count),
                     new SimpleStorage(chunks[1].Bytes));
             }
-            catch (StackOverflowException ex)
+            catch(StackOverflowException ex)
             {
                 throw new Exception("[UniVRM Import Error] json parsing failed, nesting is too deep.\n" + ex);
             }
@@ -301,50 +301,11 @@ namespace UniGLTF
             // Version Compatibility
             RestoreOlderVersionValues();
 
-            FixUnique();
-
             // parepare byte buffer
             //GLTF.baseDir = System.IO.Path.GetDirectoryName(Path);
             foreach (var buffer in GLTF.buffers)
             {
                 buffer.OpenStorage(storage);
-            }
-        }
-
-        static string MakeUniqueName(string name, HashSet<string> used)
-        {
-            for (var i = 0; i < 100; ++i)
-            {
-                name = $"{name}_{i}";
-                if (!used.Contains(name))
-                {
-                    return name;
-                }
-            }
-
-            throw new Exception("hobo arienai");
-        }
-
-        void FixUnique()
-        {
-            var used = new HashSet<string>();
-            foreach (var mesh in GLTF.meshes)
-            {
-                if (string.IsNullOrEmpty(mesh.name))
-                {
-                    mesh.name = Guid.NewGuid().ToString();
-                }
-                var lname = mesh.name.ToLower();
-                if (used.Contains(lname))
-                {
-                    // rename
-                    var uname = MakeUniqueName(lname, used);
-                    Debug.LogWarning($"same name: {lname} => {uname}");
-                    mesh.name = uname;
-                    lname = uname;
-                }
-
-                used.Add(lname);
             }
         }
 
@@ -411,9 +372,6 @@ namespace UniGLTF
         #endregion
 
         #region Load. Build unity objects
-
-        public bool EnableLoadBalancing;
-
         /// <summary>
         /// ReadAllBytes, Parse, Create GameObject
         /// </summary>
@@ -434,15 +392,6 @@ namespace UniGLTF
             Parse(path, bytes);
             Load();
             Root.name = Path.GetFileNameWithoutExtension(path);
-        }
-
-        public virtual ITextureLoader CreateTextureLoader(int index)
-        {
-#if UNIGLTF_USE_WEBREQUEST_TEXTURELOADER
-            return new UnityWebRequestTextureLoader(index);
-#else
-            return new TextureLoader(index);
-#endif
         }
 
         public void CreateTextureItems(UnityPath imageBaseDir = default(UnityPath))
@@ -473,7 +422,7 @@ namespace UniGLTF
                 else
 #endif
                 {
-                    item = new TextureItem(i, CreateTextureLoader(i));
+                    item = new TextureItem(i);
                 }
 
                 AddTexture(item);
@@ -602,7 +551,28 @@ namespace UniGLTF
                                         return meshImporter.ReadMesh(this, index);
                                     }
                                 })
-                        .ContinueWithCoroutine<MeshWithMaterials>(Scheduler.MainThread, x => BuildMesh(x, index))
+                        .ContinueWith(Scheduler.MainThread, x =>
+                        {
+                            using (MeasureTime("BuildMesh"))
+                            {
+                                var meshWithMaterials = MeshImporter.BuildMesh(this, x);
+
+                                var mesh = meshWithMaterials.Mesh;
+
+                                // mesh name
+                                if (string.IsNullOrEmpty(mesh.name))
+                                {
+                                    mesh.name = string.Format("UniGLTF import#{0}", i);
+                                }
+                                var originalName = mesh.name;
+                                for (int j = 1; Meshes.Any(y => y.Mesh.name == mesh.name); ++j)
+                                {
+                                    mesh.name = string.Format("{0}({1})", originalName, j);
+                                }
+
+                                return meshWithMaterials;
+                            }
+                        })
                         .ContinueWith(Scheduler.ThreadPool, x => Meshes.Add(x))
                         ;
                     }
@@ -616,10 +586,10 @@ namespace UniGLTF
                         AnimationImporter.ImportAnimation(this);
                     }
                 })
-                .ContinueWithCoroutine(Scheduler.MainThread, OnLoadModel)
                 .ContinueWith(Scheduler.CurrentThread,
                     _ =>
                     {
+                        OnLoadModel();
                         if (m_showSpeedLog)
                         {
                             Debug.Log(GetSpeedLog());
@@ -628,10 +598,9 @@ namespace UniGLTF
                     });
         }
 
-        protected virtual IEnumerator OnLoadModel()
+        protected virtual void OnLoadModel()
         {
             Root.name = "GLTF";
-            yield break;
         }
 
         IEnumerator TexturesProcessOnAnyThread()
@@ -674,39 +643,6 @@ namespace UniGLTF
                 }
             }
             yield return null;
-        }
-
-        IEnumerator BuildMesh(MeshImporter.MeshContext x, int i)
-        {
-            using (MeasureTime("BuildMesh"))
-            {
-                MeshWithMaterials meshWithMaterials;
-                if (EnableLoadBalancing)
-                {
-                    var buildMesh = MeshImporter.BuildMeshCoroutine(this, x);
-                    yield return buildMesh;
-                    meshWithMaterials = buildMesh.Current as MeshWithMaterials;
-                }
-                else
-                {
-                    meshWithMaterials = MeshImporter.BuildMesh(this, x);
-                }
-
-                var mesh = meshWithMaterials.Mesh;
-
-                // mesh name
-                if (string.IsNullOrEmpty(mesh.name))
-                {
-                    mesh.name = string.Format("UniGLTF import#{0}", i);
-                }
-                var originalName = mesh.name;
-                for (int j = 1; Meshes.Any(y => y.Mesh.name == mesh.name); ++j)
-                {
-                    mesh.name = string.Format("{0}({1})", originalName, j);
-                }
-
-                yield return meshWithMaterials;
-            }
         }
 
         IEnumerator LoadMeshes()
@@ -772,9 +708,9 @@ namespace UniGLTF
 
             yield return null;
         }
-        #endregion
+#endregion
 
-        #region Imported
+#region Imported
         public GameObject Root;
         public List<Transform> Nodes = new List<Transform>();
 
@@ -823,7 +759,7 @@ namespace UniGLTF
         {
             foreach (var x in Meshes)
             {
-                foreach (var y in x.Renderers)
+                foreach(var y in x.Renderers)
                 {
                     y.enabled = true;
                 }
@@ -901,11 +837,11 @@ namespace UniGLTF
                 var loaded = assetPath.LoadAsset<Material>();
 
                 // replace component reference
-                foreach (var mesh in Meshes)
+                foreach(var mesh in Meshes)
                 {
-                    foreach (var r in mesh.Renderers)
+                    foreach(var r in mesh.Renderers)
                     {
-                        for (int i = 0; i < r.sharedMaterials.Length; ++i)
+                        for(int i=0; i<r.sharedMaterials.Length; ++i)
                         {
                             if (r.sharedMaterials.Contains(o))
                             {

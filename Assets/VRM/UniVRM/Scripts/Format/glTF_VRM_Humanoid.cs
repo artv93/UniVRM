@@ -73,9 +73,8 @@ namespace VRM
     {
         public static VRMBone FromHumanBodyBone(this HumanBodyBones human)
         {
-            return human.ToVrmBone();
+            return EnumUtil.TryParseOrDefault<VRMBone>(human.ToString(), VRMBone.unknown);
         }
-
         public static HumanBodyBones ToHumanBodyBone(this VRMBone bone)
         {
 #if UNITY_5_6_OR_NEWER
@@ -85,7 +84,7 @@ namespace VRM
                 return HumanBodyBones.LastBone;
             }
 #endif
-            return bone.ToUnityBone();
+            return EnumUtil.TryParseOrDefault<HumanBodyBones>(bone.ToString(), HumanBodyBones.LastBone);
         }
     }
 
@@ -93,8 +92,7 @@ namespace VRM
     [JsonSchema(Title = "vrm.humanoid.bone")]
     public class glTF_VRM_HumanoidBone : JsonSerializableBase
     {
-        [JsonSchema(Description = "Human bone name.", EnumValues = new object[]
-        {
+        [JsonSchema(Description = "Human bone name.", EnumValues = new object[] {
             "hips",
             "leftUpperLeg",
             "rightUpperLeg",
@@ -150,9 +148,8 @@ namespace VRM
             "rightLittleIntermediate",
             "rightLittleDistal",
             "upperChest",
-        }, EnumSerializationType = EnumSerializationType.AsString)]
+        }, EnumSerializationType =EnumSerializationType.AsString)]
         public string bone;
-
         public VRMBone vrmBone
         {
             set
@@ -161,7 +158,7 @@ namespace VRM
             }
             get
             {
-                return CacheEnum.Parse<VRMBone>(bone, true);
+                return EnumUtil.TryParseOrDefault<VRMBone>(bone);
             }
         }
 
@@ -186,7 +183,7 @@ namespace VRM
 
         protected override void SerializeMembers(GLTFJsonFormatter f)
         {
-            f.Key("bone"); f.Value((string) bone.ToString());
+            f.Key("bone"); f.Value((string)bone.ToString());
             f.KeyValue(() => node);
             f.KeyValue(() => useDefaultValues);
             if (!useDefaultValues)
@@ -284,7 +281,6 @@ namespace VRM
                     };
                     humanBones.Add(found);
                 }
-
                 found.node = nodes.FindIndex(y => y.name == x.boneName);
 
                 found.useDefaultValues = x.useDefaultValues;
@@ -305,13 +301,9 @@ namespace VRM
             description.armStretch = armStretch;
             description.legStretch = legStretch;
             description.hasTranslationDoF = hasTranslationDoF;
-
-            var boneLimits = new UniHumanoid.BoneLimit[humanBones.Count];
-            int index = 0;
-            foreach (var x in humanBones)
-            {
-                if (x.node < 0 || x.node >= nodes.Count) continue;
-                boneLimits[index] = new UniHumanoid.BoneLimit
+            description.human = humanBones
+                .Where(x => x.node >= 0 && x.node < nodes.Count)
+                .Select(x => new UniHumanoid.BoneLimit
                 {
                     boneName = nodes[x.node].name,
                     useDefaultValues = x.useDefaultValues,
@@ -320,12 +312,9 @@ namespace VRM
                     min = x.min,
                     max = x.max,
                     humanBone = x.vrmBone.ToHumanBodyBone(),
-                };
-                index++;
-            }
-
-            description.human = boneLimits;
-
+                })
+            .Where(x => x.humanBone != HumanBodyBones.LastBone)
+            .ToArray();
             return description;
         }
     }

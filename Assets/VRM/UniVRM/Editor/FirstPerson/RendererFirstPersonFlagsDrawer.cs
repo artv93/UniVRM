@@ -1,4 +1,6 @@
-﻿using UnityEditor;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 
@@ -9,11 +11,11 @@ namespace VRM
     {
         static Rect LeftSide(Rect position, float width)
         {
-            return new Rect(position.x, position.y, position.width - width, position.height);
+            return new Rect(position.x, position.y, position.width-width, position.height);
         }
         static Rect RightSide(Rect position, float width)
         {
-            return new Rect(position.x + (position.width - width), position.y, width, position.height);
+            return new Rect(position.x + (position.width-width), position.y, width, position.height);
         }
 
         public override void OnGUI(Rect position,
@@ -26,5 +28,13 @@ namespace VRM
             EditorGUI.PropertyField(LeftSide(position, WIDTH), rendererProp, new GUIContent(""), true);
             EditorGUI.PropertyField(RightSide(position, WIDTH), flagProp, new GUIContent(""), true);
         }
+
+        /*
+        public override float GetPropertyHeight(SerializedProperty property,
+                                                                  GUIContent label)
+        {
+            return 60.0f;
+        }
+        */
     }
 }

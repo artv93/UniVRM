@@ -57,7 +57,7 @@ namespace VRM
 
                 Debug.LogFormat("{0}", clip.name);
             }
-            Clips = Clips.OrderBy(x => BlendShapeKey.CreateFromClip(x)).ToList();
+            Clips = Clips.OrderBy(x => BlendShapeKey.CreateFrom(x)).ToList();
         }
 
         static public BlendShapeClip CreateBlendShapeClip(string path)
@@ -79,29 +79,17 @@ namespace VRM
         /// </summary>
         public void CreateDefaultPreset()
         {
-            var presets = CacheEnum.GetValues<BlendShapePreset>();
-
-            foreach (var preset in presets)
+            foreach (var preset in ((BlendShapePreset[])Enum.GetValues(typeof(BlendShapePreset)))
+                .Where(x => x != BlendShapePreset.Unknown))
             {
-                if (preset == BlendShapePreset.Unknown) continue;
                 CreateDefaultPreset(preset);
             }
         }
 
-        void CreateDefaultPreset(BlendShapePreset preset)
+        public void CreateDefaultPreset(BlendShapePreset preset)
         {
-            BlendShapeClip clip = null;
-
-            foreach (var c in Clips)
-            {
-                if (c.Preset == preset)
-                {
-                    clip = c;
-                    break;
-                }
-            }
+            var clip = GetClip(preset);
             if (clip != null) return;
-
             clip = ScriptableObject.CreateInstance<BlendShapeClip>();
             clip.name = preset.ToString();
             clip.BlendShapeName = preset.ToString();
@@ -138,12 +126,12 @@ namespace VRM
 
         public BlendShapeClip GetClip(BlendShapePreset preset)
         {
-            return GetClip(BlendShapeKey.CreateFromPreset(preset));
+            return GetClip(new BlendShapeKey(preset));
         }
 
         public BlendShapeClip GetClip(String name)
         {
-            return GetClip(BlendShapeKey.CreateUnknown(name));
+            return GetClip(new BlendShapeKey(name));
         }
     }
 }

@@ -409,12 +409,9 @@ animator.GetBoneTransform(x.Head), animator.GetBoneTransform(x.Tail)))
                 {
                     DrawBone((HumanBodyBones)i, bones[i]);
                 }
-                if (m_bones != null)
+                foreach(var x in m_bones)
                 {
-                    foreach (var x in m_bones)
-                    {
-                        x.Draw();
-                    }
+                    x.Draw();
                 }
             }
         }

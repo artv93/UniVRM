@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace UniGLTF
@@ -64,8 +63,6 @@ namespace UniGLTF
         };
         public static string EscapeFilePath(this string path)
         {
-            path = Regex.Replace(path, @"[\u0000-\u001F\u007F]", "+");
-
             foreach(var x in EscapeChars)
             {
                 path = path.Replace(x, '+');

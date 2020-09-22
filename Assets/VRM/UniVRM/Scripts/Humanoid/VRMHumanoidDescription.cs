@@ -19,13 +19,13 @@ namespace VRM
                 return Description;
             }
 
-#if UNITY_EDITOR
+//#if UNITY_EDITOR
             if (Avatar != null)
             {
                 isCreated = true;
                 return UniHumanoid.AvatarDescription.CreateFrom(Avatar);
             }
-#endif
+//#endif
 
             return null;
         }

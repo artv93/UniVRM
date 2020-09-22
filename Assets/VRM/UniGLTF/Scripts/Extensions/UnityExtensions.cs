@@ -50,6 +50,11 @@ namespace UniGLTF
             return new Vector3(v.x, v.y, -v.z);
         }
 
+        public static Vector3 ReverseX(this Vector3 v)
+        {
+            return new Vector3(-v.x, v.y, v.z);
+        }
+
         [Obsolete]
         public static Vector2 ReverseY(this Vector2 v)
         {
@@ -59,6 +64,14 @@ namespace UniGLTF
         public static Vector2 ReverseUV(this Vector2 v)
         {
             return new Vector2(v.x, 1.0f - v.y);
+        }
+
+        public static Quaternion ReverseX(this Quaternion q)
+        {
+            float angle;
+            Vector3 axis;
+            q.ToAngleAxis(out angle, out axis);
+            return Quaternion.AngleAxis(-angle, ReverseX(axis));
         }
 
         public static Quaternion ReverseZ(this Quaternion q)
@@ -260,6 +273,17 @@ namespace UniGLTF
         public static float[] ToArray(this Color c)
         {
             return new float[] { c.r, c.g, c.b, c.a };
+        }
+
+        public static void ReverseXRecursive(this Transform root)
+        {
+            var globalMap = root.Traverse().ToDictionary(x => x, x => PosRot.FromGlobalTransform(x));
+
+            foreach (var x in root.Traverse())
+            {
+                x.position = globalMap[x].Position.ReverseX();
+                x.rotation = globalMap[x].Rotation.ReverseX();
+            }
         }
 
         public static void ReverseZRecursive(this Transform root)

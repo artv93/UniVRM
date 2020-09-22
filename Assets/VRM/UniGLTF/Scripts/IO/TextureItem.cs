@@ -46,7 +46,7 @@ namespace UniGLTF
             {
                 if (Application.isPlaying)
                 {
-                    var converted = new NormalConverter().GetImportTexture(Texture);
+                    var converted = Texture;// new NormalConverter().GetImportTexture(Texture);
                     m_converts.Add(prop, converted);
                     return converted;
                 }
@@ -110,15 +110,14 @@ namespace UniGLTF
         /// Texture from buffer
         /// </summary>
         /// <param name="index"></param>
-        public TextureItem(int index, ITextureLoader textureLoader)
+        public TextureItem(int index)
         {
             m_textureIndex = index;
-            m_textureLoader = textureLoader;
-
-            if(m_textureLoader == null)
-            {
-                throw new Exception("ITextureLoader is null.");
-            }
+#if UNIGLTF_USE_WEBREQUEST_TEXTURELOADER
+            m_textureLoader = new UnityWebRequestTextureLoader(m_textureIndex);
+#else
+            m_textureLoader = new TextureLoader(m_textureIndex);
+#endif
         }
 
 #if UNITY_EDITOR

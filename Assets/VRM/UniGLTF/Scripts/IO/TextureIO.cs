@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 #if UNITY_EDITOR
-using System.Reflection;
 using UnityEditor;
 #endif
 
@@ -119,33 +118,11 @@ namespace UniGLTF
 
         static BytesWithMime GetBytesWithMime(Texture texture, glTFTextureTypes textureType)
         {
+            /*
 #if UNITY_EDITOR
             var path = UnityPath.FromAsset(texture);
             if (path.IsUnderAssetsFolder)
             {
-                var textureImporter = (TextureImporter) AssetImporter.GetAtPath(path.Value);
-                var getSizeMethod = typeof(TextureImporter).GetMethod("GetWidthAndHeight", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (textureImporter != null && getSizeMethod != null)
-                {
-                    var args = new object[2] {0, 0};
-                    getSizeMethod.Invoke(textureImporter, args);
-                    var originalWidth = (int) args[0];
-                    var originalHeight = (int) args[1];
-
-                    var originalSize = Mathf.Max(originalWidth, originalHeight);
-                    var requiredMaxSize = textureImporter.maxTextureSize;
-
-                    // Resized exporting if MaxSize setting value is smaller than original image size.
-                    if (originalSize > requiredMaxSize)
-                    {
-                        return new BytesWithMime
-                        {
-                            Bytes = TextureItem.CopyTexture(texture, GetColorSpace(textureType), null).EncodeToPNG(),
-                            Mime = "image/png",
-                        };
-                    }
-                }
-                
                 if (path.Extension == ".png")
                 {
                     return new BytesWithMime
@@ -153,18 +130,10 @@ namespace UniGLTF
                         Bytes = System.IO.File.ReadAllBytes(path.FullPath),
                         Mime = "image/png",
                     };
-                }
-                if (path.Extension == ".jpg")
-                {
-                    return new BytesWithMime
-                    {
-                        Bytes = System.IO.File.ReadAllBytes(path.FullPath),
-                        Mime = "image/jpeg",
-                    };
-                }
+                }                    
             }
 #endif
-
+*/
             return new BytesWithMime
             {
                 Bytes = TextureItem.CopyTexture(texture, TextureIO.GetColorSpace(textureType), null).EncodeToPNG(),

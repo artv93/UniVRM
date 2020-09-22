@@ -165,7 +165,7 @@ namespace VRM
 
         public override string GetInfoString()
         {
-            return BlendShapeKey.CreateFromClip((BlendShapeClip)target).ToString();
+            return BlendShapeKey.CreateFrom((BlendShapeClip)target).ToString();
         }
     }
 }

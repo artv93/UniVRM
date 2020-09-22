@@ -85,7 +85,7 @@ namespace VRM
 
                 return true;
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 return false;
             }

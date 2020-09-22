@@ -10,8 +10,6 @@ namespace VRM
 {
     public class MeshIntegratorWizard : ScriptableWizard
     {
-        const string MENU_KEY = "Assets/UnityEditorScripts/MeshIntegratorWizard";
-        
         [SerializeField]
         GameObject m_root;
 
@@ -58,9 +56,9 @@ namespace VRM
         MaterialList[] m_duplicateMaterials;
 
         [Header("Result")]
-        public MeshUtility.MeshIntegrationResult[] integrationResults;
+        public Mesh integrated;
 
-        [MenuItem(MENU_KEY)]
+        [MenuItem(SkinnedMeshUtility.MENU_KEY + "MeshIntegrator Wizard", priority = SkinnedMeshUtility.MENU_PRIORITY)]
         static void CreateWizard()
         {
             ScriptableWizard.DisplayWizard<MeshIntegratorWizard>("MeshIntegrator", "Integrate and close window", "Integrate");
@@ -124,7 +122,7 @@ namespace VRM
                 return;
             }
 
-            m_uniqueMaterials = MeshUtility.MeshIntegratorUtility.EnumerateSkinnedMeshRenderer(m_root.transform, false)
+            m_uniqueMaterials = MeshIntegrator.EnumerateRenderer(m_root.transform, false)
                 .SelectMany(x => x.sharedMaterials)
                 .Distinct()
                 .ToArray();
@@ -150,7 +148,13 @@ namespace VRM
                 return;
             }
 
-            integrationResults = MeshIntegratorEditor.Integrate(m_root).ToArray();
+            var renderer = MeshIntegrator.Integrate(m_root);
+            if (renderer == null)
+            {
+                return;
+            }
+
+            integrated = renderer.sharedMesh;
         }
 
         void OnWizardCreate()

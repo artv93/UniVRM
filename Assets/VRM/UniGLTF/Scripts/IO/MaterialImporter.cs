@@ -17,12 +17,16 @@ namespace UniGLTF
     {
         IShaderStore m_shaderStore;
 
-        protected Func<int, TextureItem> GetTextureFunc;
+        ImporterContext m_context;
+        protected ImporterContext Context
+        {
+            get { return m_context; }
+        }
 
-        public MaterialImporter(IShaderStore shaderStore, Func<int, TextureItem> getTextureFunc)
+        public MaterialImporter(IShaderStore shaderStore, ImporterContext context)
         {
             m_shaderStore = shaderStore;
-            GetTextureFunc = getTextureFunc;
+            m_context = context;
         }
 
         private enum BlendMode
@@ -87,14 +91,11 @@ namespace UniGLTF
                 // texture
                 if (x.pbrMetallicRoughness.baseColorTexture != null)
                 {
-                    var texture = GetTextureFunc(x.pbrMetallicRoughness.baseColorTexture.index);
+                    var texture = m_context.GetTexture(x.pbrMetallicRoughness.baseColorTexture.index);
                     if (texture != null)
                     {
                         material.mainTexture = texture.Texture;
                     }
-
-                    // Texture Offset and Scale
-                    SetTextureOffsetAndScale(material, x.pbrMetallicRoughness.baseColorTexture, "_MainTex");
                 }
 
                 // color
@@ -155,20 +156,17 @@ namespace UniGLTF
 
                 if (x.pbrMetallicRoughness.baseColorTexture != null && x.pbrMetallicRoughness.baseColorTexture.index != -1)
                 {
-                    var texture = GetTextureFunc(x.pbrMetallicRoughness.baseColorTexture.index);
+                    var texture = m_context.GetTexture(x.pbrMetallicRoughness.baseColorTexture.index);
                     if (texture != null)
                     {
                         material.mainTexture = texture.Texture;
                     }
-
-                    // Texture Offset and Scale
-                    SetTextureOffsetAndScale(material, x.pbrMetallicRoughness.baseColorTexture, "_MainTex");
                 }
 
                 if (x.pbrMetallicRoughness.metallicRoughnessTexture != null && x.pbrMetallicRoughness.metallicRoughnessTexture.index != -1)
                 {
                     material.EnableKeyword("_METALLICGLOSSMAP");
-                    var texture = GetTextureFunc(x.pbrMetallicRoughness.metallicRoughnessTexture.index);
+                    var texture = Context.GetTexture(x.pbrMetallicRoughness.metallicRoughnessTexture.index);
                     if (texture != null)
                     {
                         var prop = "_MetallicGlossMap";
@@ -179,9 +177,6 @@ namespace UniGLTF
                     material.SetFloat("_Metallic", 1.0f);
                     // Set 1.0f as hard-coded. See: https://github.com/dwango/UniVRM/issues/212.
                     material.SetFloat("_GlossMapScale", 1.0f);
-
-                    // Texture Offset and Scale
-                    SetTextureOffsetAndScale(material, x.pbrMetallicRoughness.metallicRoughnessTexture, "_MetallicGlossMap");
                 }
                 else
                 {
@@ -193,30 +188,24 @@ namespace UniGLTF
             if (x.normalTexture != null && x.normalTexture.index != -1)
             {
                 material.EnableKeyword("_NORMALMAP");
-                var texture = GetTextureFunc(x.normalTexture.index);
+                var texture = Context.GetTexture(x.normalTexture.index);
                 if (texture != null)
                 {
                     var prop = "_BumpMap";
                     material.SetTexture(prop, texture.ConvertTexture(prop));
                     material.SetFloat("_BumpScale", x.normalTexture.scale);
                 }
-
-                // Texture Offset and Scale
-                SetTextureOffsetAndScale(material, x.normalTexture, "_BumpMap");
             }
 
             if (x.occlusionTexture != null && x.occlusionTexture.index != -1)
             {
-                var texture = GetTextureFunc(x.occlusionTexture.index);
+                var texture = Context.GetTexture(x.occlusionTexture.index);
                 if (texture != null)
                 {
                     var prop = "_OcclusionMap";
                     material.SetTexture(prop, texture.ConvertTexture(prop));
                     material.SetFloat("_OcclusionStrength", x.occlusionTexture.strength);
                 }
-
-                // Texture Offset and Scale
-                SetTextureOffsetAndScale(material, x.occlusionTexture, "_OcclusionMap");
             }
 
             if (x.emissiveFactor != null
@@ -232,14 +221,11 @@ namespace UniGLTF
 
                 if (x.emissiveTexture != null && x.emissiveTexture.index != -1)
                 {
-                    var texture = GetTextureFunc(x.emissiveTexture.index);
+                    var texture = Context.GetTexture(x.emissiveTexture.index);
                     if (texture != null)
                     {
                         material.SetTexture("_EmissionMap", texture.Texture);
                     }
-
-                    // Texture Offset and Scale
-                    SetTextureOffsetAndScale(material, x.emissiveTexture, "_EmissionMap");
                 }
             }
 
@@ -288,29 +274,6 @@ namespace UniGLTF
 
             material.SetFloat("_Mode", (float)blendMode);
             return material;
-        }
-
-        private static void SetTextureOffsetAndScale(Material material, glTFTextureInfo textureInfo, string propertyName)
-        {
-            if (textureInfo.extensions != null && textureInfo.extensions.KHR_texture_transform != null)
-            {
-                var textureTransform = textureInfo.extensions.KHR_texture_transform;
-                Vector2 offset = new Vector2(0, 0);
-                Vector2 scale = new Vector2(1, 1);
-                if (textureTransform.offset != null && textureTransform.offset.Length == 2)
-                {
-                    offset = new Vector2(textureTransform.offset[0], textureTransform.offset[1]);
-                }
-                if (textureTransform.scale != null && textureTransform.scale.Length == 2)
-                {
-                    scale = new Vector2(textureTransform.scale[0], textureTransform.scale[1]);
-                }
-
-                offset.y = (offset.y + scale.y - 1.0f) * -1.0f;
-
-                material.SetTextureOffset(propertyName, offset);
-                material.SetTextureScale(propertyName, scale);
-            }
         }
     }
 }

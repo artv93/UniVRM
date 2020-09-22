@@ -18,7 +18,7 @@ namespace VRM
         public string m_comment;
 
         [SerializeField, Header("Gizmo")]
-        bool m_drawGizmo = default;
+        bool m_drawGizmo;
 
         [SerializeField]
         Color m_gizmoColor = Color.yellow;
@@ -47,14 +47,6 @@ namespace VRM
 
         [SerializeField]
         public VRMSpringBoneColliderGroup[] ColliderGroups;
-
-        public enum SpringBoneUpdateType
-        {
-            LateUpdate,
-            FixedUpdate,
-        }
-        [SerializeField]
-        public SpringBoneUpdateType m_updateType = SpringBoneUpdateType.LateUpdate;
 
         /// <summary>
         /// 
@@ -282,22 +274,6 @@ namespace VRM
             }
         }
 
-        void LateUpdate()
-        {
-            if (m_updateType == SpringBoneUpdateType.LateUpdate)
-            {
-                UpdateProcess(Time.deltaTime);
-            }
-        }
-        
-        void FixedUpdate()
-        {
-            if (m_updateType == SpringBoneUpdateType.FixedUpdate)
-            {
-                UpdateProcess(Time.fixedDeltaTime);
-            }
-        }
-
         public struct SphereCollider
         {
             public Vector3 Position;
@@ -305,7 +281,7 @@ namespace VRM
         }
 
         List<SphereCollider> m_colliderList = new List<SphereCollider>();
-        private void UpdateProcess(float deltaTime)
+        void LateUpdate()
         {
             if (m_verlet == null || m_verlet.Count == 0)
             {
@@ -336,8 +312,8 @@ namespace VRM
                 }
             }
 
-            var stiffness = m_stiffnessForce * deltaTime;
-            var external = m_gravityDir * (m_gravityPower * deltaTime);
+            var stiffness = m_stiffnessForce * Time.deltaTime;
+            var external = m_gravityDir * (m_gravityPower * Time.deltaTime);
 
             foreach (var verlet in m_verlet)
             {

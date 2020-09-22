@@ -1,5 +1,8 @@
-﻿using UniGLTF.UniUnlit;
+﻿using System;
+using System.Collections.Generic;
+using UniGLTF.UniUnlit;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 
 namespace UniGLTF
@@ -49,8 +52,6 @@ namespace UniGLTF
                     {
                         index = index,
                     };
-
-                    Export_MainTextureTransform(m, material.pbrMetallicRoughness.baseColorTexture);
                 }
             }
         }
@@ -76,8 +77,6 @@ namespace UniGLTF
                         {
                             index = index,
                         };
-
-                    Export_MainTextureTransform(m, material.pbrMetallicRoughness.metallicRoughnessTexture);
                 }
             }
 
@@ -105,15 +104,14 @@ namespace UniGLTF
         {
             if (m.HasProperty("_BumpMap"))
             {
-                var index = textureManager.ConvertAndGetIndex(m.GetTexture("_BumpMap"), new NormalConverter());
+                //var index = textureManager.ConvertAndGetIndex(m.GetTexture("_BumpMap"), new NormalConverter());
+                var index = textureManager.CopyAndGetIndex(m.GetTexture("_BumpMap"), RenderTextureReadWrite.Linear);
                 if (index != -1)
                 {
                     material.normalTexture = new glTFMaterialNormalTextureInfo()
                     {
                         index = index,
                     };
-
-                    Export_MainTextureTransform(m, material.normalTexture);
                 }
 
                 if (index != -1 && m.HasProperty("_BumpScale"))
@@ -134,8 +132,6 @@ namespace UniGLTF
                     {
                         index = index,
                     };
-
-                    Export_MainTextureTransform(m, material.occlusionTexture);
                 }
 
                 if (index != -1 && m.HasProperty("_OcclusionStrength"))
@@ -169,33 +165,7 @@ namespace UniGLTF
                     {
                         index = index,
                     };
-
-                    Export_MainTextureTransform(m, material.emissiveTexture);
                 }
-            }
-        }
-
-        static void Export_MainTextureTransform(Material m, glTFTextureInfo textureInfo)
-        {
-            Export_TextureTransform(m, textureInfo, "_MainTex");
-        }
-
-        static void Export_TextureTransform(Material m, glTFTextureInfo textureInfo, string propertyName)
-        {
-            if (textureInfo != null && m.HasProperty(propertyName))
-            {
-                var offset = m.GetTextureOffset(propertyName);
-                var scale = m.GetTextureScale(propertyName);
-                offset.y = (offset.y + scale.y - 1) * -1.0f;
-
-                textureInfo.extensions = new glTFTextureInfo_extensions
-                {
-                    KHR_texture_transform = new glTF_KHR_texture_transform()
-                    {
-                        offset = new float[] { offset.x, offset.y },
-                        scale = new float[] { scale.x, scale.y },
-                    }
-                };
             }
         }
 

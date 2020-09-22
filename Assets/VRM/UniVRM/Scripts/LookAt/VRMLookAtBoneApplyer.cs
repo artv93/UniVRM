@@ -16,16 +16,16 @@ namespace VRM
         public OffsetOnTransform RightEye;
 
         [SerializeField, Header("Degree Mapping")]
-        public CurveMapper HorizontalOuter = new CurveMapper(90.0f, 10.0f);
+        public CurveMapper HorizontalOuter = new CurveMapper(35.0f, 35.0f);
 
         [SerializeField]
-        public CurveMapper HorizontalInner = new CurveMapper(90.0f, 10.0f);
+        public CurveMapper HorizontalInner = new CurveMapper(35.0f, 35.0f);
 
         [SerializeField]
-        public CurveMapper VerticalDown = new CurveMapper(90.0f, 10.0f);
+        public CurveMapper VerticalDown = new CurveMapper(35.0f, 35.0f);
 
         [SerializeField]
-        public CurveMapper VerticalUp = new CurveMapper(90.0f, 10.0f);
+        public CurveMapper VerticalUp = new CurveMapper(35.0f, 35.0f);
 
         public void OnImported(VRMImporterContext context)
         {

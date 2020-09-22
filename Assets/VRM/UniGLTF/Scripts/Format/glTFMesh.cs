@@ -146,11 +146,9 @@ namespace UniGLTF
         [JsonSchema(MinItems = 1)]
         public float[] weights;
 
-        [JsonSchema(SkipSchemaComparison = true)]
-        public glTFMesh_extras extras = null;
-
         // empty schemas
         public object extensions;
+        public object extras;
 
         public glTFMesh()
         {

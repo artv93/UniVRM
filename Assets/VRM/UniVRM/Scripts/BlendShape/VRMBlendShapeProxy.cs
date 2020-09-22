@@ -83,7 +83,7 @@ namespace VRM
             {
                 foreach (var clip in BlendShapeAvatar.Clips)
                 {
-                    var key = BlendShapeKey.CreateFromClip(clip);
+                    var key = BlendShapeKey.CreateFrom(clip);
                     yield return new KeyValuePair<BlendShapeKey, float>(key, m_merger.GetValue(key));
                 }
             }
@@ -115,52 +115,42 @@ namespace VRM
 
     public static class VRMBlendShapeProxyExtensions
     {
-        [Obsolete("Use BlendShapeKey.CreateFromPreset")]
         public static float GetValue(this VRMBlendShapeProxy proxy, BlendShapePreset key)
         {
-            return proxy.GetValue(BlendShapeKey.CreateFromPreset(key));
+            return proxy.GetValue(new BlendShapeKey(key));
         }
 
-        [Obsolete("Use BlendShapeKey.CreateUnknown")]
         public static float GetValue(this VRMBlendShapeProxy proxy, String key)
         {
-            return proxy.GetValue(BlendShapeKey.CreateUnknown(key));
+            return proxy.GetValue(new BlendShapeKey(key));
         }
 
         [Obsolete("Use ImmediatelySetValue")]
         public static void SetValue(this VRMBlendShapeProxy proxy, BlendShapePreset key, float value)
         {
-            proxy.ImmediatelySetValue(BlendShapeKey.CreateFromPreset(key), value);
+            proxy.ImmediatelySetValue(new BlendShapeKey(key), value);
         }
-
-        [Obsolete("Use BlendShapeKey.CreateFromPreset")]
         public static void ImmediatelySetValue(this VRMBlendShapeProxy proxy, BlendShapePreset key, float value)
         {
-            proxy.ImmediatelySetValue(BlendShapeKey.CreateFromPreset(key), value);
+            proxy.ImmediatelySetValue(new BlendShapeKey(key), value);
         }
-
-        [Obsolete("Use BlendShapeKey.CreateFromPreset")]
         public static void AccumulateValue(this VRMBlendShapeProxy proxy, BlendShapePreset key, float value)
         {
-            proxy.AccumulateValue(BlendShapeKey.CreateFromPreset(key), value);
+            proxy.AccumulateValue(new BlendShapeKey(key), value);
         }
 
         [Obsolete("Use ImmediatelySetValue")]
         public static void SetValue(this VRMBlendShapeProxy proxy, String key, float value)
         {
-            proxy.ImmediatelySetValue(BlendShapeKey.CreateUnknown(key), value);
+            proxy.ImmediatelySetValue(new BlendShapeKey(key), value);
         }
-
-        [Obsolete("Use BlendShapeKey.CreateUnknown")]
         public static void ImmediatelySetValue(this VRMBlendShapeProxy proxy, String key, float value)
         {
-            proxy.ImmediatelySetValue(BlendShapeKey.CreateUnknown(key), value);
+            proxy.ImmediatelySetValue(new BlendShapeKey(key), value);
         }
-
-        [Obsolete("Use BlendShapeKey.CreateUnknown")]
         public static void AccumulateValue(this VRMBlendShapeProxy proxy, String key, float value)
         {
-            proxy.AccumulateValue(BlendShapeKey.CreateUnknown(key), value);
+            proxy.AccumulateValue(new BlendShapeKey(key), value);
         }
 
         [Obsolete("Use ImmediatelySetValue")]
@@ -174,11 +164,11 @@ namespace VRM
         {
             if (apply)
             {
-                proxy.ImmediatelySetValue(BlendShapeKey.CreateFromPreset(key), value);
+                proxy.ImmediatelySetValue(new BlendShapeKey(key), value);
             }
             else
             {
-                proxy.AccumulateValue(BlendShapeKey.CreateFromPreset(key), value);
+                proxy.AccumulateValue(new BlendShapeKey(key), value);
             }
         }
 
@@ -187,11 +177,11 @@ namespace VRM
         {
             if (apply)
             {
-                proxy.ImmediatelySetValue(BlendShapeKey.CreateUnknown(key), value);
+                proxy.ImmediatelySetValue(new BlendShapeKey(key), value);
             }
             else
             {
-                proxy.AccumulateValue(BlendShapeKey.CreateUnknown(key), value);
+                proxy.AccumulateValue(new BlendShapeKey(key), value);
             }
         }
 

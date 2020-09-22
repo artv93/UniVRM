@@ -18,8 +18,7 @@ namespace UniGLTF
         static glTFMesh ExportPrimitives(glTF gltf, int bufferIndex,
             string rendererName,
             Mesh mesh, Material[] materials,
-            List<Material> unityMaterials,
-            bool removeVertexColor)
+            List<Material> unityMaterials)
         {
             var positions = mesh.vertices.Select(y => y.ReverseZ()).ToArray();
             var positionAccessorIndex = gltf.ExtendBufferAndGetAccessorIndex(bufferIndex, positions, glBufferTarget.ARRAY_BUFFER);
@@ -31,10 +30,7 @@ namespace UniGLTF
             var tangentAccessorIndex = gltf.ExtendBufferAndGetAccessorIndex(bufferIndex, mesh.tangents.Select(y => y.ReverseZ()).ToArray(), glBufferTarget.ARRAY_BUFFER);
 #endif
             var uvAccessorIndex = gltf.ExtendBufferAndGetAccessorIndex(bufferIndex, mesh.uv.Select(y => y.ReverseUV()).ToArray(), glBufferTarget.ARRAY_BUFFER);
-
-            var colorAccessorIndex = -1;
-            if (!removeVertexColor)
-                colorAccessorIndex = gltf.ExtendBufferAndGetAccessorIndex(bufferIndex, mesh.colors, glBufferTarget.ARRAY_BUFFER);
+            var colorAccessorIndex = gltf.ExtendBufferAndGetAccessorIndex(bufferIndex, mesh.colors, glBufferTarget.ARRAY_BUFFER);
 
             var boneweights = mesh.boneWeights;
             var weightAccessorIndex = gltf.ExtendBufferAndGetAccessorIndex(bufferIndex, boneweights.Select(y => new Vector4(y.weight0, y.weight1, y.weight2, y.weight3)).ToArray(), glBufferTarget.ARRAY_BUFFER);
@@ -232,11 +228,10 @@ namespace UniGLTF
             };
         }
 
-        public static IEnumerable<(Mesh, glTFMesh, Dictionary<int, int>)> ExportMeshes(glTF gltf, int bufferIndex,
+        public static void ExportMeshes(glTF gltf, int bufferIndex,
             List<MeshWithRenderer> unityMeshes, List<Material> unityMaterials,
             bool useSparseAccessorForMorphTarget,
-            bool exportOnlyBlendShapePosition,
-            bool removeVertexColor)
+            bool exportOnlyBlendShapePosition)
         {
             for (int i = 0; i < unityMeshes.Count; ++i)
             {
@@ -246,23 +241,14 @@ namespace UniGLTF
 
                 var gltfMesh = ExportPrimitives(gltf, bufferIndex,
                     x.Renderer.name,
-                    mesh, materials, unityMaterials, removeVertexColor);
+                    mesh, materials, unityMaterials);
 
-                var blendShapeIndexMap = new Dictionary<int, int>();
-                int exportBlendShapes = 0;
                 for (int j = 0; j < mesh.blendShapeCount; ++j)
                 {
                     var morphTarget = ExportMorphTarget(gltf, bufferIndex,
                         mesh, j,
                         useSparseAccessorForMorphTarget,
                         exportOnlyBlendShapePosition);
-                    if (morphTarget.POSITION < 0 && morphTarget.NORMAL < 0 && morphTarget.TANGENT < 0)
-                    {
-                        continue;
-                    }
-
-                    // maybe skip
-                    blendShapeIndexMap.Add(j, exportBlendShapes++);
 
                     //
                     // all primitive has same blendShape
@@ -274,7 +260,7 @@ namespace UniGLTF
                     }
                 }
 
-                yield return (mesh, gltfMesh, blendShapeIndexMap);
+                gltf.meshes.Add(gltfMesh);
             }
         }
     }

@@ -19,13 +19,12 @@ namespace UniHumanoid
         public Vector3 max;
         public Vector3 center;
         public float axisLength;
-        private static string[] cashedHumanTraitBoneName = null;
 
         public static BoneLimit From(HumanBone bone)
         {
             return new BoneLimit
             {
-                humanBone = (HumanBodyBones) Enum.Parse(typeof(HumanBodyBones), bone.humanName.Replace(" ", ""), true),
+                humanBone = (HumanBodyBones)Enum.Parse(typeof(HumanBodyBones), bone.humanName.Replace(" ", ""), true),
                 boneName = bone.boneName,
                 useDefaultValues = bone.limit.useDefaultValues,
                 min = bone.limit.min,
@@ -37,13 +36,7 @@ namespace UniHumanoid
 
         public static String ToHumanBoneName(HumanBodyBones b)
         {
-            // 呼び出し毎にGCが発生するのでキャッシュする
-            if (cashedHumanTraitBoneName == null)
-            {
-                cashedHumanTraitBoneName = HumanTrait.BoneName;
-            }
-
-            foreach (var x in cashedHumanTraitBoneName)
+            foreach (var x in HumanTrait.BoneName)
             {
                 if (x.Replace(" ", "") == b.ToString())
                 {
@@ -87,28 +80,10 @@ namespace UniHumanoid
 
         public HumanDescription ToHumanDescription(Transform root)
         {
-            var transforms = root.GetComponentsInChildren<Transform>();
-            var skeletonBones = new SkeletonBone[transforms.Length];
-            var index = 0;
-            foreach (var t in transforms)
-            {
-                skeletonBones[index] = t.ToSkeletonBone();
-                index++;
-            }
-
-            var humanBones = new HumanBone[human.Length];
-            index = 0;
-            foreach (var bonelimit in human)
-            {
-                humanBones[index] = bonelimit.ToHumanBone();
-                index++;
-            }
-
-
             return new HumanDescription
             {
-                skeleton = skeletonBones,
-                human = humanBones,
+                skeleton = root.Traverse().Select(x => x.ToSkeletonBone()).ToArray(),
+                human = human.Select(x => x.ToHumanBone()).ToArray(),
                 armStretch = armStretch,
                 legStretch = legStretch,
                 upperArmTwist = upperArmTwist,
@@ -150,7 +125,7 @@ namespace UniHumanoid
             return avatar;
         }
 
-#if UNITY_EDITOR
+//#if UNITY_EDITOR
         public static AvatarDescription CreateFrom(Avatar avatar)
         {
             var description = default(HumanDescription);
@@ -161,7 +136,7 @@ namespace UniHumanoid
 
             return CreateFrom(description);
         }
-#endif
+//#endif
 
         public static AvatarDescription CreateFrom(HumanDescription description)
         {
@@ -179,7 +154,7 @@ namespace UniHumanoid
             return avatarDescription;
         }
 
-        public static AvatarDescription Create(AvatarDescription src = null)
+        public static AvatarDescription Create(AvatarDescription src=null)
         {
             var avatarDescription = ScriptableObject.CreateInstance<AvatarDescription>();
             avatarDescription.name = "AvatarDescription";
@@ -203,7 +178,6 @@ namespace UniHumanoid
                 avatarDescription.upperLegTwist = 0.5f;
                 avatarDescription.lowerLegTwist = 0.5f;
             }
-
             return avatarDescription;
         }
 
@@ -233,7 +207,7 @@ namespace UniHumanoid
             }).ToArray();
         }
 
-#if UNITY_EDITOR
+//#if UNITY_EDITOR
         /// <summary>
         /// * https://answers.unity.com/questions/612177/how-can-i-access-human-avatar-bone-and-muscle-valu.html
         /// </summary>
@@ -244,7 +218,11 @@ namespace UniHumanoid
         {
             if (target != null)
             {
-                var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(target));
+                var ava = target as Avatar;
+                des = ava.humanDescription;
+                return true;
+
+                /*var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(target));
                 if (importer != null)
                 {
                     Debug.Log("AssetImporter Type: " + importer.GetType());
@@ -259,11 +237,10 @@ namespace UniHumanoid
                     {
                         Debug.LogWarning("## Please Select Imported Model in Project View not prefab or other things ##");
                     }
-                }
+                }*/
             }
-
             return false;
         }
-#endif
+//#endif
     }
 }

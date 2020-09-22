@@ -1,14 +1,17 @@
-﻿using System.IO;
-using System.Text;
+﻿using System;
+using System.IO;
+using UniGLTF;
+using UniJSON;
 using UnityEditor;
 using UnityEngine;
 
+
 namespace VRM
 {
-    public class VRMVersionMenu : EditorWindow
+    public static class VRMVersionMenu
     {
-        const string VersionPath = "Assets/VRM/UniVRM/Scripts/Format/VRMVersion.cs";
-        const string VersionTemplate = @"
+        const string path = "Assets/VRM/UniVRM/Scripts/Format/VRMVersion.cs";
+        const string template = @"
 namespace VRM
 {{
     public static partial class VRMVersion
@@ -16,129 +19,153 @@ namespace VRM
         public const int MAJOR = {0};
         public const int MINOR = {1};
         public const int PATCH = {2};
-        public const string VERSION = ""{0}.{1}.{2}"";
+        public const string PRE_ID = ""{3}"";
+
+        public const string VERSION = ""{0}.{1}.{2}{4}"";
     }}
 }}
 ";
 
-        const string VRMShadersPackagePath = "Assets/VRMShaders/package.json";
-        const string VRMShadersPackageTemplate = @"{{
-  ""name"": ""com.vrmc.vrmshaders"",
-  ""version"": ""{0}.{1}.{2}"",
-  ""displayName"": ""VRM Shaders"",
-  ""description"": ""VRM Shaders"",
-  ""unity"": ""2018.4"",
-  ""keywords"": [
-    ""vrm"",
-    ""shader""
-  ],
-  ""author"": {{
-    ""name"": ""VRM Consortium""
-  }}
-}}
-";
-
-        const string MeshUtilityPath = "Assets/MeshUtility/package.json";
-        const string MeshUtilityTemplate = @"{{
-  ""name"": ""com.vrmc.meshutility"",
-  ""version"": ""{0}.{1}.{2}"",
-  ""displayName"": ""MeshUtility"",
-  ""unity"": ""2018.4"",
-  ""description"": ""MeshUtility is a package for mesh separation, etc. \n\nCheck out the latest information here: <https://github.com/vrm-c/UniVRM/tree/master/Assets/MeshUtility>"",
-  ""keywords"": [
-    ""mesh""
-  ],
-  ""author"": {{
-    ""name"": ""VRM Consortium""
-  }}
-}}
-";
-
-        const string VRMPackagePath = "Assets/VRM/package.json";
-        const string VRMPackageTemplate = @"{{
-  ""name"": ""com.vrmc.univrm"",
-  ""version"": ""{0}.{1}.{2}"",
-  ""displayName"": ""VRM"",
-  ""description"": ""VRM importer"",
-  ""unity"": ""2018.4"",
-  ""keywords"": [
-    ""vrm"",
-    ""importer"",
-    ""avatar"",
-    ""vr""
-  ],
-  ""author"": {{
-    ""name"": ""VRM Consortium""
-  }},
-  ""dependencies"": {{
-    ""com.vrmc.vrmshaders"": ""{0}.{1}.{2}"",
-    ""com.vrmc.meshutility"": ""{0}.{1}.{2}""
-  }}
-}}
-";
-
-        [SerializeField]
-        string m_version;
-
-        void OnGUI()
+#if VRM_DEVELOP
+        [MenuItem(VRMVersion.MENU + "/Increment")]
+#endif
+        static void IncrementVersion()
         {
-            GUILayout.Label($"Current version: {VRMVersion.VERSION}");
-
-            m_version = EditorGUILayout.TextField("Major.Minor.Patch", m_version);
-
-            if (GUILayout.Button("Apply"))
-            {
-                if (string.IsNullOrEmpty(m_version))
-                {
-                    return;
-                }
-                var splitted = m_version.Split('.');
-                if (splitted.Length != 3)
-                {
-                    Debug.LogWarning($"InvalidFormat: {m_version}");
-                    return;
-                }
-                var values = new int[3];
-                for (int i = 0; i < 3; ++i)
-                {
-                    values[i] = int.Parse(splitted[i]);
-                }
-
-                // generate
-                var utf8 = new UTF8Encoding(false);
-                File.WriteAllText(VersionPath, string.Format(VersionTemplate,
-                    values[0],
-                    values[1],
-                    values[2]), utf8);
-                File.WriteAllText(VRMShadersPackagePath, string.Format(VRMShadersPackageTemplate,
-                    values[0],
-                    values[1],
-                    values[2]), utf8);
-                File.WriteAllText(MeshUtilityPath, string.Format(MeshUtilityTemplate,
-                    values[0],
-                    values[1],
-                    values[2]), utf8);
-                File.WriteAllText(VRMPackagePath, string.Format(VRMPackageTemplate,
-                    values[0],
-                    values[1],
-                    values[2]), utf8);
-                AssetDatabase.Refresh();
-            }
-
-            if (GUILayout.Button("Close"))
-            {
-                Close();
-            }
+            var source = string.Format(
+                template,
+                VRMVersion.MAJOR,
+                VRMVersion.MINOR + 1,
+                VRMVersion.PATCH,
+                VRMVersion.PRE_ID,
+                VRMVersion.PRE_ID != "" ? string.Format("-{0}", VRMVersion.PRE_ID) : ""
+                );
+            File.WriteAllText(path, source);
+            AssetDatabase.Refresh();
         }
 
 #if VRM_DEVELOP
-        [MenuItem(VRMVersion.MENU + "/VersionDialog")]
+        [MenuItem(VRMVersion.MENU + "/Decrement")]
 #endif
-        static void ShowVersionDialog()
+        static void DecrementVersion()
         {
-            var window = ScriptableObject.CreateInstance<VRMVersionMenu>();
-            window.m_version = VRMVersion.VERSION;
-            window.ShowUtility();
+            var source = string.Format(
+                template,
+                VRMVersion.MAJOR,
+                VRMVersion.MINOR - 1,
+                VRMVersion.PATCH,
+                VRMVersion.PRE_ID,
+                VRMVersion.PRE_ID != "" ? string.Format("-{0}", VRMVersion.PRE_ID) : ""
+                );
+            File.WriteAllText(path, source);
+            AssetDatabase.Refresh();
+        }
+
+        static string GetTitle(ListTreeNode<JsonValue> node)
+        {
+            try
+            {
+                var titleNode = node["title"];
+                if (titleNode.IsString())
+                {
+                    return titleNode.GetString();
+                }
+            }
+            catch(Exception)
+            {
+            }
+            return "";
+        }
+
+        static void TraverseItem(ListTreeNode<JsonValue> node, JsonFormatter f, UnityPath dir)
+        {
+            var title = GetTitle(node);
+            if (string.IsNullOrEmpty(title))
+            {
+                Traverse(node, f, dir);
+            }
+            else
+            {
+                // ref
+                f.BeginMap();
+                f.Key("$ref");
+                var fileName = string.Format("{0}.schema.json", title);
+                f.Value(fileName);
+                f.EndMap();
+
+                // new formatter
+                {
+                    var subFormatter = new JsonFormatter(4);
+
+                    subFormatter.BeginMap();
+                    foreach (var _kv in node.ObjectItems())
+                    {
+                        subFormatter.Key(_kv.Key.GetUtf8String());
+                        Traverse(_kv.Value, subFormatter, dir);
+                    }
+                    subFormatter.EndMap();
+
+                    var subJson = subFormatter.ToString();
+                    var path = dir.Child(fileName);
+                    File.WriteAllText(path.FullPath, subJson);
+                }
+            }
+        }
+
+        static void Traverse(ListTreeNode<JsonValue> node, JsonFormatter f, UnityPath dir)
+        {
+            if (node.IsArray())
+            {
+                f.BeginList();
+                foreach (var x in node.ArrayItems())
+                {
+                    TraverseItem(x, f, dir);
+                }
+                f.EndList();
+            }
+            else if (node.IsMap())
+            {
+                f.BeginMap();
+                foreach (var kv in node.ObjectItems())
+                {
+                    f.Key(kv.Key.GetUtf8String());
+                    TraverseItem(kv.Value, f, dir);
+                }
+                f.EndMap();
+            }
+            else
+            {
+                f.Value(node);
+            }
+        }
+
+        static UnityPath SplitAndWriteJson(ListTreeNode<JsonValue> parsed, UnityPath dir)
+        {
+            var f = new JsonFormatter(4);
+            Traverse(parsed, f, dir);
+            var json = f.ToString();
+
+            var path = dir.Child("vrm.schema.json");
+            Debug.LogFormat("write JsonSchema: {0}", path.FullPath);
+            File.WriteAllText(path.FullPath, json);
+            return path;
+        }
+
+#if VRM_DEVELOP
+        [MenuItem(VRMVersion.MENU + "/Export JsonSchema")]
+#endif
+        static void ExportJsonSchema()
+        {
+            var schema = JsonSchema.FromType<glTF_VRM_extensions>();
+            var f = new JsonFormatter(2);
+            schema.ToJson(f);
+            var json = f.ToString();
+
+            var dir = UnityPath.FromFullpath(Application.dataPath + "/VRM/specification/0.0/schema");
+            dir.EnsureFolder();
+
+            var path = SplitAndWriteJson(JsonParser.Parse(json), dir);
+
+            Selection.activeObject = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path.Value);
         }
     }
 }

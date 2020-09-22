@@ -7,7 +7,6 @@ using System.IO;
 using System.Text;
 #if UNITY_EDITOR
 using UnityEditor;
-
 #endif
 
 
@@ -16,9 +15,7 @@ namespace VRM
     public static class VRMSpringUtility
     {
 #if UNITY_EDITOR
-
         #region save
-
         [MenuItem(VRMVersion.MENU + "/SaveSpringBoneToJSON", validate = true)]
         static bool SaveSpringBoneToJSONIsEnable()
         {
@@ -41,10 +38,10 @@ namespace VRM
         static void SaveSpringBoneToJSON()
         {
             var path = EditorUtility.SaveFilePanel(
-                "Save spring to json",
-                null,
-                "VRMSpring.json",
-                "json");
+                    "Save spring to json",
+                    null,
+                    "VRMSpring.json",
+                    "json");
             if (string.IsNullOrEmpty(path))
             {
                 return;
@@ -57,7 +54,7 @@ namespace VRM
             ExportSecondary(root, nodes,
                 spring.colliderGroups.Add,
                 spring.boneGroups.Add
-            );
+                );
 
             File.WriteAllText(path, spring.ToJson());
         }
@@ -65,7 +62,6 @@ namespace VRM
         #endregion
 
         #region load
-
         [MenuItem(VRMVersion.MENU + "/LoadSpringBoneFromJSON", true)]
         static bool LoadSpringBoneFromJSONIsEnable()
         {
@@ -88,9 +84,9 @@ namespace VRM
         static void LoadSpringBoneFromJSON()
         {
             var path = EditorUtility.OpenFilePanel(
-                "Load spring from json",
-                null,
-                "json");
+                    "Load spring from json",
+                    null,
+                    "json");
             if (string.IsNullOrEmpty(path))
             {
                 return;
@@ -105,9 +101,7 @@ namespace VRM
 
             LoadSecondary(root, nodes, spring);
         }
-
         #endregion
-
 #endif
 
         public static void ExportSecondary(Transform root, List<Transform> nodes,
@@ -133,6 +127,7 @@ namespace VRM
                         offset = x.Offset,
                         radius = x.Radius,
                     };
+
                 }).ToList();
 
                 addSecondaryColliderGroup(colliderGroup);
@@ -171,29 +166,10 @@ namespace VRM
             }
 
             // clear components
-            var vrmSpringBones = root.GetComponentsInChildren<VRMSpringBone>();
-            var vrmSpringBoneColliderGroup = root.GetComponentsInChildren<VRMSpringBoneColliderGroup>();
-
-            var length = (vrmSpringBones?.Length ?? 0) + (vrmSpringBoneColliderGroup?.Length ?? 0);
-            var remove = new Component[length];
-
-            var index = 0;
-            if (vrmSpringBones != null)
-            {
-                foreach (var vrmSpringBone in vrmSpringBones)
-                {
-                    remove[index++] = vrmSpringBone;
-                }
-            }
-
-            if (vrmSpringBoneColliderGroup != null)
-            {
-                foreach (var vrmSpringBoneCollider in vrmSpringBoneColliderGroup)
-                {
-                    remove[index++] = vrmSpringBoneCollider;
-                }
-            }
-
+            var remove = root.Traverse()
+                .SelectMany(x => x.GetComponents<Component>())
+                .Where(x => x is VRMSpringBone || x is VRMSpringBoneColliderGroup)
+                .ToArray();
             foreach (var x in remove)
             {
                 if (Application.isPlaying)
@@ -231,31 +207,17 @@ namespace VRM
                     {
                         vrmBoneGroup.m_center = nodes[boneGroup.center];
                     }
-
                     vrmBoneGroup.m_comment = boneGroup.comment;
                     vrmBoneGroup.m_dragForce = boneGroup.dragForce;
                     vrmBoneGroup.m_gravityDir = boneGroup.gravityDir;
                     vrmBoneGroup.m_gravityPower = boneGroup.gravityPower;
                     vrmBoneGroup.m_hitRadius = boneGroup.hitRadius;
                     vrmBoneGroup.m_stiffnessForce = boneGroup.stiffiness;
-
                     if (boneGroup.colliderGroups != null && boneGroup.colliderGroups.Any())
                     {
-                        vrmBoneGroup.ColliderGroups = new VRMSpringBoneColliderGroup[boneGroup.colliderGroups.Length];
-                        for (int i = 0; i < boneGroup.colliderGroups.Length; ++i)
-                        {
-                            var colliderGroup = boneGroup.colliderGroups[i];
-                            vrmBoneGroup.ColliderGroups[i] = colliders[colliderGroup];
-                        }
+                        vrmBoneGroup.ColliderGroups = boneGroup.colliderGroups.Select(x => colliders[x]).ToArray();
                     }
-
-                    var boneList = new List<Transform>();
-                    foreach (var x in boneGroup.bones)
-                    {
-                        boneList.Add(nodes[x]);
-                    }
-
-                    vrmBoneGroup.RootBones = boneList;
+                    vrmBoneGroup.RootBones = boneGroup.bones.Select(x => nodes[x]).ToList();
                 }
             }
             else
@@ -263,5 +225,6 @@ namespace VRM
                 secondary.gameObject.AddComponent<VRMSpringBone>();
             }
         }
+
     }
 }

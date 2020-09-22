@@ -25,36 +25,29 @@ namespace UniGLTF
         private static void ExportFromMenu()
         {
             var go = Selection.activeObject as GameObject;
-
-            if (go.transform.position == Vector3.zero &&
-                go.transform.rotation == Quaternion.identity &&
-                go.transform.localScale == Vector3.one)
+            var path = EditorUtility.SaveFilePanel(
+                    "Save glb",
+                    "",
+                    go.name + ".glb",
+                    "glb");
+            if (string.IsNullOrEmpty(path))
             {
-                var path = EditorUtility.SaveFilePanel(
-                    "Save glb", "", go.name + ".glb", "glb");
-                if (string.IsNullOrEmpty(path))
-                {
-                    return;
-                }
-
-                var gltf = new glTF();
-                using (var exporter = new gltfExporter(gltf))
-                {
-                    exporter.Prepare(go);
-                    exporter.Export();
-                }
-                var bytes = gltf.ToGlbBytes();
-                File.WriteAllBytes(path, bytes);
-
-                if (path.StartsWithUnityAssetPath())
-                {
-                    AssetDatabase.ImportAsset(path.ToUnityRelativePath());
-                    AssetDatabase.Refresh();
-                }
+                return;
             }
-            else
+
+            var gltf = new glTF();
+            using (var exporter = new gltfExporter(gltf))
             {
-                EditorUtility.DisplayDialog("Error", "The Root transform should have Default translation, rotation and scale.", "ok");
+                exporter.Prepare(go);
+                exporter.Export();
+            }
+            var bytes = gltf.ToGlbBytes();
+            File.WriteAllBytes(path, bytes);
+
+            if (path.StartsWithUnityAssetPath())
+            {
+                AssetDatabase.ImportAsset(path.ToUnityRelativePath());
+                AssetDatabase.Refresh();
             }
         }
 #endif
@@ -73,12 +66,6 @@ namespace UniGLTF
             set;
         }
 
-        public bool RemoveVertexColor
-        {
-            get;
-            set;
-        }
-
         public GameObject Copy
         {
             get;
@@ -86,18 +73,6 @@ namespace UniGLTF
         }
 
         public List<Mesh> Meshes
-        {
-            get;
-            private set;
-        }
-
-        /// <summary>
-        /// Mesh毎に、元のBlendShapeIndex => ExportされたBlendShapeIndex の対応を記録する
-        /// 
-        /// BlendShape が空の場合にスキップするので
-        /// </summary>
-        /// <value></value>
-        public Dictionary<Mesh, Dictionary<int, int>> MeshBlendShapeIndexMap
         {
             get;
             private set;
@@ -130,7 +105,6 @@ namespace UniGLTF
             get
             {
                 yield return glTF_KHR_materials_unlit.ExtensionName;
-                yield return glTF_KHR_texture_transform.ExtensionName;
             }
         }
 
@@ -167,7 +141,7 @@ namespace UniGLTF
 
         public void Export()
         {
-            FromGameObject(glTF, Copy, UseSparseAccessorForBlendShape, RemoveVertexColor);
+            FromGameObject(glTF, Copy, UseSparseAccessorForBlendShape);
         }
 
         public void Dispose()
@@ -213,8 +187,7 @@ namespace UniGLTF
             return node;
         }
 
-        void FromGameObject(glTF gltf, GameObject go, bool useSparseAccessorForMorphTarget = false,
-                            bool removeVertexColor = false)
+        void FromGameObject(glTF gltf, GameObject go, bool useSparseAccessorForMorphTarget = false)
         {
             var bytesBuffer = new ArrayByteBuffer(new byte[50 * 1024 * 1024]);
             var bufferIndex = gltf.AddBuffer(bytesBuffer);
@@ -237,6 +210,30 @@ namespace UniGLTF
                 #region Materials and Textures
                 Materials = Nodes.SelectMany(x => x.GetSharedMaterials()).Where(x => x != null).Distinct().ToList();
                 var unityTextures = Materials.SelectMany(x => TextureIO.GetTextures(x)).Where(x => x.Texture != null).Distinct().ToList();
+
+                /*List<TextureIO.TextureExportItem> unityTextures = new List<TextureIO.TextureExportItem>();
+                for (int i = 0; i < Materials.Count; ++i)
+                {
+                    var m = Materials[i];
+                    var props = ShaderPropExporter.PreShaderPropExporter.GetPropsForSupportedShader(m.shader.name);
+                    if (props == null)
+                    {
+                        if (m.mainTexture != null)
+                            unityTextures.Add(new TextureIO.TextureExportItem(m.mainTexture, glTFTextureTypes.BaseColor));
+                    }
+                    else
+                    {
+                        foreach (var prop in props.Properties)
+                        {
+                            if (prop.ShaderPropertyType == ShaderPropExporter.ShaderPropertyType.TexEnv)
+                            {
+                                var tex = m.GetTexture(prop.Key);
+                                if (tex != null)
+                                    unityTextures.Add(new TextureIO.TextureExportItem(tex, TextureIO.GetglTFTextureType(m.shader.name, prop.Key)));
+                            }
+                        }
+                    }
+                }*/
 
                 TextureManager = new TextureExportManager(unityTextures.Select(x => x.Texture));
 
@@ -273,19 +270,7 @@ namespace UniGLTF
                         return true;
                     })
                     .ToList();
-
-                MeshBlendShapeIndexMap = new Dictionary<Mesh, Dictionary<int, int>>();
-                foreach (var (mesh, gltfMesh, blendShapeIndexMap) in MeshExporter.ExportMeshes(
-                        gltf, bufferIndex, unityMeshes, Materials, useSparseAccessorForMorphTarget,
-                        ExportOnlyBlendShapePosition, removeVertexColor))
-                {
-                    gltf.meshes.Add(gltfMesh);
-                    if (!MeshBlendShapeIndexMap.ContainsKey(mesh))
-                    {
-                        // 同じmeshが複数回現れた
-                        MeshBlendShapeIndexMap.Add(mesh, blendShapeIndexMap);
-                    }
-                }
+                MeshExporter.ExportMeshes(gltf, bufferIndex, unityMeshes, Materials, useSparseAccessorForMorphTarget, ExportOnlyBlendShapePosition);
                 Meshes = unityMeshes.Select(x => x.Mesh).ToList();
                 #endregion
 
